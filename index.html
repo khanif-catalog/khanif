@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ХЬАНИФ | Оптовый портал</title>
+    <title>ХЬАНИФ | Оптовый магазин</title>
     <style>
-        /* ПРЕМИАЛЬНЫЙ ДИЗАЙН (Light Theme, Минимализм, Изумруд) */
+        /* ПРЕМИАЛЬНЫЙ ДИЗАЙН (Light Theme, Изумруд) - Строгий и минималистичный стиль */
         :root {
             --primary: #059669; 
             --primary-hover: #047857;
@@ -23,7 +23,7 @@
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; -webkit-tap-highlight-color: transparent; }
-        body { background-color: var(--bg-body); color: var(--text-main); padding-bottom: 100px; -webkit-font-smoothing: antialiased; }
+        body { background-color: var(--bg-body); color: var(--text-main); padding-bottom: 100px; }
 
         /* --- ШАПКА И ЛОГОТИП --- */
         header {
@@ -36,7 +36,7 @@
         .logo { display: flex; align-items: center; gap: 12px; cursor: pointer; user-select: none; transition: transform 0.2s;}
         .logo:active { transform: scale(0.97); }
         .logo-icon {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%); 
+            background: linear-gradient(135deg, #059669 0%, #047857 100%); 
             color: white; 
             width: 44px; height: 44px; 
             display: flex; align-items: center; justify-content: center;
@@ -223,10 +223,13 @@
     </header>
 
     <div id="client-ui">
+        
         <div class="search-container">
             <input type="text" id="search-input" class="search-input" placeholder="🔍 Поиск по названию или коду..." oninput="filterSearch()">
         </div>
+
         <div class="category-scroll" id="cat-container"></div>
+
         <div class="grid" id="products-grid"></div>
 
         <div class="bottom-bar" id="cart-bar">
@@ -263,6 +266,7 @@
     </div>
 
     <div id="admin-ui" class="admin-wrap">
+        
         <div class="dashboard-stats">
             <div class="stat-card">
                 <div class="stat-title">Выручка (Отгружено)</div>
@@ -279,6 +283,7 @@
             <button class="admin-tab" onclick="switchTab('tab-sent')">Архив</button>
             <button class="admin-tab" onclick="switchTab('tab-parser')">Вставить шифр</button>
             <button class="admin-tab" onclick="switchTab('tab-products')">База товаров</button>
+            <button class="admin-tab" style="margin-left:auto; background:#f3f4f6; color:#374151;" onclick="exitAdmin()">Выйти</button>
         </div>
 
         <div class="admin-section active" id="tab-orders">
@@ -344,7 +349,7 @@
             </div>
 
             <div class="input-group">
-                <label>Фасовка (Кол-во штук) *</label>
+                <label>Фасовка (Кол-во штук в упаковке) *</label>
                 <input type="text" id="prod-desc" placeholder="Например: Блок 30 шт.">
             </div>
             
@@ -354,7 +359,7 @@
                     <select id="prod-cat"></select>
                 </div>
                 <div class="input-group" style="flex:1;">
-                    <label>Остаток *</label>
+                    <label>Остаток на складе *</label>
                     <input type="number" id="prod-stock" placeholder="100" min="0">
                 </div>
             </div>
@@ -377,28 +382,43 @@
     </div>
 
     <script>
-        // --- 1. ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ И СОСТОЯНИЯ (КРИТИЧНО ДЛЯ РАБОТЫ) ---
-        let isAdmin = false; // <-- ИМЕННО ЭТОТ ПАРАМЕТР ЛОМАЛ ВХОД В БРАУЗЕРЕ
+        // =========================================================================
+        // 1. ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ И СОСТОЯНИЯ
+        // =========================================================================
+        let isAdmin = false; 
         let clickTimer = null;
         let clicks = 0;
         const ADMIN_PIN = "0908";
 
-        // Базовые данные
+        // Стартовые данные (если память пуста)
         const defaultCats = ["Мармелад", "Жвачки", "Леденцы", "Шоколад"];
         const defaultProducts = [
             { code: "001", name: "Арбузик Леденец", desc: "Дисплей 30 шт.", cat: "Леденцы", price: 300, stock: 500, img: "https://images.unsplash.com/photo-1575224300306-1b8da36134ec?w=400" },
             { code: "002", name: "Цветной Балабол Клубника", desc: "Банка 180 шт.", cat: "Жвачки", price: 450, stock: 300, img: "https://images.unsplash.com/photo-1582050041567-9cfdd330d545?w=400" },
-            { code: "003", name: "Браслет сладкое сердце", desc: "12 гр. х 48 шт.", cat: "Мармелад", price: 200, stock: 150, img: "https://images.unsplash.com/photo-1581798459219-318e76aecc7b?w=400" }
+            { code: "003", name: "Браслет сладкое сердце", desc: "12 гр. х 48 шт.", cat: "Мармелад", price: 200, stock: 150, img: "https://images.unsplash.com/photo-1581798459219-318e76aecc7b?w=400" },
+            { code: "004", name: "Мармеладные Червячки Кислые", desc: "Коробка 1.5 кг", cat: "Мармелад", price: 350, stock: 0, img: "https://images.unsplash.com/photo-1582050041567-9cfdd330d545?w=400" }
         ];
 
-        let categories = defaultCats;
-        let products = defaultProducts;
-        let orders = [];
+        // Загрузка из LocalStorage для мгновенного старта
+        let categories = JSON.parse(localStorage.getItem('kh_cats_global')) || defaultCats;
+        let products = JSON.parse(localStorage.getItem('kh_prods_global')) || defaultProducts;
+        let orders = JSON.parse(localStorage.getItem('kh_orders_global')) || [];
+        
         let cart = {}; 
         let currentCat = "Все";
         let searchQuery = "";
+        let isFirebaseConnected = false;
+        let db;
 
-        // --- 2. ПОДКЛЮЧЕНИЕ К FIREBASE ---
+        // =========================================================================
+        // 2. ИНИЦИАЛИЗАЦИЯ ИНТЕРФЕЙСА (МГНОВЕННЫЙ ЗАПУСК)
+        // =========================================================================
+        renderCategoriesUI();
+        renderCatalog();
+
+        // =========================================================================
+        // 3. ПОДКЛЮЧЕНИЕ FIREBASE (ФОНОВАЯ ЗАГРУЗКА)
+        // =========================================================================
         const firebaseConfig = {
             apiKey: "AIzaSyCLnm2OlGpXcUw0gjNtomUS7O1ktKRLilw",
             authDomain: "khanifcatalog.firebaseapp.com",
@@ -410,20 +430,72 @@
             measurementId: "G-DLLP3KWT9D"
         };
         
-        const isFirebaseConfigured = firebaseConfig.apiKey !== "ВСТАВИТЬ_СЮДА";
-        let db;
+        try {
+            firebase.initializeApp(firebaseConfig);
+            db = firebase.database();
+            isFirebaseConnected = true;
+            console.log("🔥 Firebase: Фоновое соединение установлено");
 
-        if (isFirebaseConfigured) {
-            try {
-                firebase.initializeApp(firebaseConfig);
-                db = firebase.database();
-                console.log("🔥 Firebase: Подключено стабильно");
-            } catch (e) {
-                console.error("Ошибка Firebase: ", e);
+            // Слушаем облако и обновляем локальные данные тихо
+            db.ref('categories').on('value', snapshot => {
+                if(snapshot.exists()) {
+                    categories = safeArray(snapshot.val());
+                    localStorage.setItem('kh_cats_global', JSON.stringify(categories));
+                    renderCategoriesUI();
+                }
+            });
+
+            db.ref('products').on('value', snapshot => {
+                if(snapshot.exists()) {
+                    products = safeArray(snapshot.val());
+                    localStorage.setItem('kh_prods_global', JSON.stringify(products));
+                    if(!isAdmin) renderCatalog();
+                    if(isAdmin) renderAdminProducts();
+                }
+            });
+
+            db.ref('orders').on('value', snapshot => {
+                if(snapshot.exists()) {
+                    orders = safeArray(snapshot.val());
+                    localStorage.setItem('kh_orders_global', JSON.stringify(orders));
+                    if(isAdmin) { renderAdminOrders(); updateDashboard(); }
+                }
+            });
+
+        } catch (e) {
+            console.error("Ошибка Firebase, продолжаем в локальном режиме: ", e);
+        }
+
+        function saveToCloud() {
+            // Сохраняем всегда локально
+            localStorage.setItem('kh_cats_global', JSON.stringify(categories));
+            localStorage.setItem('kh_prods_global', JSON.stringify(products));
+            localStorage.setItem('kh_orders_global', JSON.stringify(orders));
+            
+            // Если есть интернет, отправляем в облако
+            if (isFirebaseConnected && db) {
+                db.ref('categories').set(categories);
+                db.ref('products').set(products);
+                db.ref('orders').set(orders);
             }
         }
 
-        // --- 3. ЗАГРУЗКА И СИНХРОНИЗАЦИЯ ДАННЫХ ---
+        // =========================================================================
+        // 4. УТИЛИТЫ
+        // =========================================================================
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.innerText = msg;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2500);
+        }
+
+        function closeModal(id) {
+            const el = document.getElementById(id);
+            el.classList.remove('show');
+            setTimeout(() => el.style.display = 'none', 200);
+        }
+
         function formatNumber(num) {
             return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
         }
@@ -433,61 +505,9 @@
             return Array.isArray(data) ? data : Object.values(data);
         }
 
-        if (isFirebaseConfigured && db) {
-            db.ref('categories').on('value', snapshot => {
-                categories = snapshot.exists() ? safeArray(snapshot.val()) : defaultCats;
-                renderCategoriesUI();
-            });
-
-            db.ref('products').on('value', snapshot => {
-                products = snapshot.exists() ? safeArray(snapshot.val()) : defaultProducts;
-                renderCatalog();
-                if (isAdmin) renderAdminProducts();
-            });
-
-            db.ref('orders').on('value', snapshot => {
-                orders = snapshot.exists() ? safeArray(snapshot.val()) : [];
-                if (isAdmin) { renderAdminOrders(); updateDashboard(); }
-            });
-
-            // Первичная инициализация облака, если оно пустое
-            db.ref('products').once('value').then(snapshot => {
-                if(!snapshot.exists()) saveToCloud();
-            });
-        } else {
-            // Локальный режим (резервный)
-            categories = JSON.parse(localStorage.getItem('kh_cats_global')) || defaultCats;
-            products = JSON.parse(localStorage.getItem('kh_prods_global')) || defaultProducts;
-            orders = JSON.parse(localStorage.getItem('kh_orders_global')) || [];
-        }
-
-        function saveToCloud() {
-            if (isFirebaseConfigured && db) {
-                db.ref('categories').set(categories);
-                db.ref('products').set(products);
-                db.ref('orders').set(orders);
-            } else {
-                localStorage.setItem('kh_cats_global', JSON.stringify(categories));
-                localStorage.setItem('kh_prods_global', JSON.stringify(products));
-                localStorage.setItem('kh_orders_global', JSON.stringify(orders));
-            }
-        }
-
-        // --- 4. УТИЛИТЫ И UI ---
-        function showToast(msg) {
-            const toast = document.getElementById('toast');
-            toast.innerText = msg;
-            toast.classList.add('show');
-            setTimeout(() => toast.classList.remove('show'), 3000);
-        }
-
-        function closeModal(id) {
-            const el = document.getElementById(id);
-            el.classList.remove('show');
-            setTimeout(() => el.style.display = 'none', 200);
-        }
-
-        // --- 5. ЛОГИКА АДМИНА (КЛЮЧЕВОЙ ИСПРАВЛЕННЫЙ БЛОК) ---
+        // =========================================================================
+        // 5. ЛОГИКА АДМИНА (ВХОД / ВЫХОД)
+        // =========================================================================
         function handleLogoClick() {
             if (isAdmin) {
                 exitAdmin();
@@ -500,11 +520,11 @@
             } else if (clicks === 2) {
                 clearTimeout(clickTimer);
                 clicks = 0;
-                let pin = prompt("🔐 Введите Пин-код доступа:");
-                if (pin === ADMIN_PIN) {
+                let pin = prompt("🔐 Пин-код доступа:");
+                if(pin === ADMIN_PIN) {
                     enterAdmin();
-                } else if (pin !== null && pin !== "") {
-                    showToast("❌ Неверный код доступа");
+                } else if(pin !== null && pin.trim() !== "") {
+                    showToast("❌ Неверный код");
                 }
             }
         }
@@ -517,7 +537,7 @@
             updateDashboard();
             renderAdminOrders();
             renderAdminProducts();
-            showToast("✅ Вы успешно вошли в панель управления");
+            showToast("✅ Вы вошли в панель управления");
         }
 
         function exitAdmin() {
@@ -526,10 +546,12 @@
             document.getElementById('client-ui').style.display = 'block';
             document.getElementById('admin-badge').style.display = 'none';
             renderCatalog();
-            showToast("🔒 Переход в режим магазина");
+            showToast("Режим магазина");
         }
 
-        // --- 6. КАТЕГОРИИ И КАТАЛОГ КЛИЕНТА ---
+        // =========================================================================
+        // 6. ИНТЕРФЕЙС КЛИЕНТА (КАТАЛОГ И КОРЗИНА)
+        // =========================================================================
         function renderCategoriesUI() {
             const catContainer = document.getElementById('cat-container');
             const catSelect = document.getElementById('prod-cat');
@@ -537,26 +559,11 @@
 
             catContainer.innerHTML = `<button class="cat-btn ${currentCat === 'Все' ? 'active' : ''}" onclick="filterCat('Все')">Все товары</button>`;
             catSelect.innerHTML = '';
-
+            
             categories.forEach(c => {
                 catContainer.innerHTML += `<button class="cat-btn ${currentCat === c ? 'active' : ''}" onclick="filterCat('${c}')">${c}</button>`;
                 catSelect.innerHTML += `<option value="${c}">${c}</option>`;
             });
-        }
-
-        function addCategory() {
-            let newCat = prompt("Введите название новой категории:");
-            if (newCat && newCat.trim() !== "") {
-                newCat = newCat.trim();
-                if (!categories.includes(newCat)) {
-                    categories.push(newCat);
-                    saveToCloud();
-                    renderCategoriesUI();
-                    showToast("✅ Категория добавлена");
-                } else {
-                    showToast("⚠️ Такая категория уже существует");
-                }
-            }
         }
 
         function filterSearch() {
@@ -571,7 +578,7 @@
         }
 
         function renderCatalog() {
-            if (isAdmin) return; // Не рендерим каталог, если открыта админка
+            if (isAdmin) return; // Не рендерим каталог для админа
             const grid = document.getElementById('products-grid');
             if(!grid) return;
             grid.innerHTML = '';
@@ -586,14 +593,15 @@
             }
             
             if(filtered.length === 0) {
-                grid.innerHTML = `<div class="empty-state">По вашему запросу ничего не найдено 🔍</div>`;
+                grid.innerHTML = `<div class="empty-state">По вашему запросу ничего не найдено</div>`;
                 return;
             }
 
             filtered.forEach(p => {
                 let qty = cart[p.code] || 0;
+                
                 let stockBadge = p.stock > 0 
-                    ? `<div class="badge-stock">В наличии: ${p.stock}</div>` 
+                    ? `<div class="badge-stock">В наличии: ${p.stock} шт</div>` 
                     : `<div class="badge-stock out">Закончился</div>`;
 
                 let disablePlus = (qty >= p.stock || p.stock <= 0) ? 'disabled' : '';
@@ -630,11 +638,11 @@
             
             if (cart[code] > p.stock) {
                 cart[code] = p.stock;
-                showToast("📦 Достигнут максимум остатка на складе");
+                showToast("Достигнут максимум остатка на складе");
             }
             
             if (cart[code] <= 0) delete cart[code];
-            else if (change > 0 && navigator.vibrate) navigator.vibrate(20);
+            else if (change > 0 && navigator.vibrate) navigator.vibrate(30);
             
             renderCatalog();
         }
@@ -677,7 +685,7 @@
             if(!shop) { shopInp.classList.add('error'); hasError = true; } else { shopInp.classList.remove('error'); }
             if(!addr) { addrInp.classList.add('error'); hasError = true; } else { addrInp.classList.remove('error'); }
 
-            if(hasError) return showToast("⚠️ Заполните обязательные поля (Название и Адрес)");
+            if(hasError) return showToast("⚠️ Укажите название магазина и адрес!");
 
             let msg = `🛒 НОВЫЙ ЗАКАЗ: ХЬАНИФ\n`;
             msg += `Магазин: ${shop}\n`;
@@ -703,7 +711,9 @@
             renderCatalog();
         }
 
-        // --- 7. АДМИНКА: СТАТИСТИКА И ЗАКАЗЫ ---
+        // =========================================================================
+        // 7. ИНТЕРФЕЙС АДМИНА (АНАЛИТИКА И ЗАКАЗЫ)
+        // =========================================================================
         function updateDashboard() {
             let rev = 0, count = 0;
             orders.forEach(o => {
@@ -744,7 +754,7 @@
             let sentOrders = orders.filter(o => o.status === 'sent');
 
             if(newOrders.length === 0) listNew.innerHTML = '<div class="empty-state">Пока новых заказов нет.</div>';
-            if(sentOrders.length === 0) listSent.innerHTML = '<div class="empty-state">Архив отгрузок пуст.</div>';
+            if(sentOrders.length === 0) listSent.innerHTML = '<div class="empty-state">Архив пуст.</div>';
 
             orders.forEach((o, i) => {
                 let itemsHtml = o.items.map(it => `
@@ -775,7 +785,7 @@
                             ${itemsHtml}
                         </div>
                         ${o.status === 'new' ? 
-                            `<button class="btn-main" style="width:100%; font-size:16px; background:var(--success); padding:16px;" onclick="markAsSent(${i})">✅ Перенесено в Планшет (Списать остатки)</button>` : 
+                            `<button class="btn-main" style="width:100%; font-size:17px; background:var(--success); padding:16px;" onclick="markAsSent(${i})">✅ Перенесено в Планшет (Списать остатки)</button>` : 
                             `<div style="width:100%; text-align:center; background:#e5e7eb; padding:14px; border-radius:12px; font-size:15px; font-weight:800; color:var(--text-sec);">Заказ отгружен (В архиве)</div>`
                         }
                     </div>
@@ -788,6 +798,7 @@
 
         function markAsSent(idx) {
             let order = orders[idx];
+            
             // Списание остатков
             order.items.forEach(item => {
                 let p = products.find(x => x.code === item.code);
@@ -796,16 +807,23 @@
                     if(p.stock < 0) p.stock = 0;
                 }
             });
+
             order.status = 'sent';
             
             saveToCloud(); 
-            showToast("📦 Заказ отправлен в архив, остатки обновлены");
-            if(!isFirebaseConfigured) { renderAdminOrders(); renderAdminProducts(); updateDashboard(); }
+            showToast("📦 Заказ в архиве, остатки списаны");
+            
+            // Если Firebase не успел ответить, перерисовываем сразу
+            if(!isFirebaseConnected) {
+                renderAdminOrders();
+                renderAdminProducts();
+                updateDashboard();
+            }
         }
 
         function parseOrderText() {
             let text = document.getElementById('inp-wa-text').value;
-            if(!text.includes("Магазин:")) return showToast("❌ Ошибка: В тексте нет слова 'Магазин:'");
+            if(!text.includes("Магазин:")) return showToast("❌ Это не похоже на наш заказ (нет слова 'Магазин:')");
             
             let shop = text.match(/Магазин:\s*(.+)/)?.[1] || "Не указан";
             let addr = text.match(/Адрес:\s*(.+)/)?.[1] || "";
@@ -834,14 +852,31 @@
             };
             
             orders.unshift(newOrder); // Добавляем в начало
-            saveToCloud(); 
+            saveToCloud();
             
             document.getElementById('inp-wa-text').value = '';
-            showToast("✅ Заказ успешно восстановлен!");
+            showToast("✅ Заказ успешно прочитан!");
             switchTab('tab-orders');
         }
 
-        // --- 8. АДМИНКА: ТОВАРЫ ---
+        // =========================================================================
+        // 8. АДМИНКА (УПРАВЛЕНИЕ ТОВАРАМИ)
+        // =========================================================================
+        function addCategory() {
+            let newCat = prompt("Введите название новой категории:");
+            if(newCat && newCat.trim() !== "") {
+                newCat = newCat.trim();
+                if(!categories.includes(newCat)) {
+                    categories.push(newCat);
+                    saveToCloud(); 
+                    renderCategoriesUI();
+                    showToast("✅ Категория добавлена!");
+                } else {
+                    showToast("⚠️ Такая категория уже есть");
+                }
+            }
+        }
+
         function getNextCode() {
             if(products.length === 0) return "001";
             let max = 0;
@@ -868,7 +903,7 @@
                         <td style="padding:16px; color:var(--primary); font-weight:900; font-size:17px;">${formatNumber(p.price)} ₽</td>
                         <td style="padding:16px; font-weight:700; font-size:15px; color:${p.stock > 0 ? 'inherit' : 'var(--danger)'};">${p.stock} шт</td>
                         <td style="padding:16px; text-align:right;">
-                            <button class="btn-main" style="background:#e5e7eb; color:#111827; padding:8px 16px; font-size:14px;" onclick="editProd(${i})">Изменить</button>
+                            <button class="btn-main" style="background:#e5e7eb; color:#111827; padding:8px 16px; font-size:14px;" onclick="editProd(${i})">Редактировать</button>
                         </td>
                     </tr>
                 `;
@@ -919,12 +954,12 @@
             let stock = parseInt(document.getElementById('prod-stock').value) || 0;
             let img = document.getElementById('prod-img').value.trim();
             
-            if(!name || !price) return showToast("⚠️ Укажите название и цену товара");
+            if(!name || !price) return showToast("⚠️ Укажите название и цену");
 
             let obj = { code, name, desc, cat, price, stock, img };
             if(idx === -1) {
                 products.push(obj);
-                showToast("✅ Новый товар успешно добавлен");
+                showToast("✅ Товар добавлен");
             } else {
                 products[idx] = obj;
                 showToast("✅ Изменения сохранены");
@@ -932,27 +967,20 @@
             
             saveToCloud(); 
             closeModal('modal-product');
-            if(!isFirebaseConfigured) renderAdminProducts();
+            if(!isFirebaseConnected) renderAdminProducts();
         }
 
         function deleteProduct() {
-            if(confirm("❗ Вы уверены, что хотите удалить товар навсегда? Это действие нельзя отменить.")) {
+            if(confirm("❗ Точно удалить товар навсегда?")) {
                 let idx = parseInt(document.getElementById('prod-index').value);
                 products.splice(idx, 1);
                 
                 saveToCloud(); 
                 closeModal('modal-product');
-                if(!isFirebaseConfigured) renderAdminProducts();
-                showToast("🗑 Товар безвозвратно удален");
+                if(!isFirebaseConnected) renderAdminProducts();
+                showToast("🗑 Товар удален");
             }
         }
-
-        // --- 9. ЗАПУСК ИНТЕРФЕЙСА ПРИ ОТКРЫТИИ ---
-        renderCategoriesUI();
-        if(!isFirebaseConfigured) {
-            renderCatalog(); 
-        }
-
     </script>
 </body>
 </html>
