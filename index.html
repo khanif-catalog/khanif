@@ -952,9 +952,19 @@
             showToast("📦 Заказ в архиве, остатки списаны");
         }
 
-        // Запуск
+                // --- ЗАПУСК И ИНИЦИАЛИЗАЦИЯ ---
+        let isAdmin = false; 
+
+        // Инициализация интерфейса
         renderCategoriesUI();
-        if(!isFirebaseConfigured) renderCatalog(); // Если Firebase нет, запускаем локально сразу
+        
+        // Если нет Firebase, рендерим сразу локально
+        if (!isFirebaseConfigured) {
+            renderCatalog();
+        }
+
+        // Дополнительная проверка на случай задержки загрузки Firebase
+        console.log("Система готова");
 
     </script>
 </body>
