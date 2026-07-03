@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ХЬАНИФ | Оптовый магазин</title>
+    <title>ХЬАНИФ | Оптовый портал</title>
     <style>
-        /* ПРЕМИАЛЬНЫЙ ДИЗАЙН (Light Theme, Изумруд) - Строгий и минималистичный стиль */
+        /* ПРЕМИАЛЬНЫЙ ДИЗАЙН (Минимализм, Светлые тона, Изумрудный акцент) */
         :root {
             --primary: #059669; 
             --primary-hover: #047857;
-            --bg-body: #f3f4f6; 
+            --bg-body: #f4f6f8; 
             --bg-card: #ffffff;
             --text-main: #111827;
             --text-sec: #6b7280;
@@ -23,7 +23,7 @@
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; -webkit-tap-highlight-color: transparent; }
-        body { background-color: var(--bg-body); color: var(--text-main); padding-bottom: 100px; }
+        body { background-color: var(--bg-body); color: var(--text-main); padding-bottom: 100px; -webkit-font-smoothing: antialiased; }
 
         /* --- ШАПКА И ЛОГОТИП --- */
         header {
@@ -36,7 +36,7 @@
         .logo { display: flex; align-items: center; gap: 12px; cursor: pointer; user-select: none; transition: transform 0.2s;}
         .logo:active { transform: scale(0.97); }
         .logo-icon {
-            background: linear-gradient(135deg, #059669 0%, #047857 100%); 
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%); 
             color: white; 
             width: 44px; height: 44px; 
             display: flex; align-items: center; justify-content: center;
@@ -45,7 +45,7 @@
             border: 2px solid rgba(255,255,255,0.8);
         }
         .logo-text-wrapper { display: flex; flex-direction: column; }
-        .logo-text { font-weight: 900; font-size: 20px; letter-spacing: 0.5px; color: #111827; line-height: 1.1; }
+        .logo-text { font-weight: 900; font-size: 20px; letter-spacing: 0.5px; color: var(--text-main); line-height: 1.1; }
         .logo-sub { font-size: 11px; color: var(--primary); font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
 
         /* --- ПОИСК И КАТЕГОРИИ --- */
@@ -233,13 +233,10 @@
     </header>
 
     <div id="client-ui">
-        
         <div class="search-container">
             <input type="text" id="search-input" class="search-input" placeholder="🔍 Поиск по названию или коду..." oninput="filterSearch()">
         </div>
-
         <div class="category-scroll" id="cat-container"></div>
-
         <div class="grid" id="products-grid"></div>
 
         <div class="bottom-bar" id="cart-bar">
@@ -331,7 +328,6 @@
                     <button class="btn-main" style="padding:12px 20px; font-size:15px;" onclick="openProdModal()">+ Новый товар</button>
                 </div>
             </div>
-            
             <div style="background:#fff; border:1px solid var(--border); border-radius:12px; overflow: auto;">
                 <table style="width:100%; border-collapse:collapse; font-size:15px; text-align:left; min-width: 700px;">
                     <thead style="background: #f8fafc;">
@@ -399,27 +395,40 @@
     </div>
 
     <script>
+        // Глобальный перехватчик ошибок для надежности
+        window.onerror = function(msg) {
+            showToast("Техническая ошибка: " + msg);
+        };
+
         // =========================================================================
-        // 1. ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ И СОСТОЯНИЯ
+        // 1. ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ И БЕЗОПАСНАЯ ЗАГРУЗКА
         // =========================================================================
         let isAdmin = false; 
         let clickTimer = null;
         let clicks = 0;
         const ADMIN_PIN = "0908";
 
-        // Стартовые данные (если память пуста)
         const defaultCats = ["Мармелад", "Жвачки", "Леденцы", "Шоколад"];
         const defaultProducts = [
             { code: "001", name: "Арбузик Леденец", desc: "Дисплей 30 шт.", cat: "Леденцы", price: 300, stock: 500, img: "https://images.unsplash.com/photo-1575224300306-1b8da36134ec?w=400" },
             { code: "002", name: "Цветной Балабол Клубника", desc: "Банка 180 шт.", cat: "Жвачки", price: 450, stock: 300, img: "https://images.unsplash.com/photo-1582050041567-9cfdd330d545?w=400" },
-            { code: "003", name: "Браслет сладкое сердце", desc: "12 гр. х 48 шт.", cat: "Мармелад", price: 200, stock: 150, img: "https://images.unsplash.com/photo-1581798459219-318e76aecc7b?w=400" },
-            { code: "004", name: "Мармеладные Червячки Кислые", desc: "Коробка 1.5 кг", cat: "Мармелад", price: 350, stock: 0, img: "https://images.unsplash.com/photo-1582050041567-9cfdd330d545?w=400" }
+            { code: "003", name: "Браслет сладкое сердце", desc: "12 гр. х 48 шт.", cat: "Мармелад", price: 200, stock: 150, img: "https://images.unsplash.com/photo-1581798459219-318e76aecc7b?w=400" }
         ];
 
-        // Загрузка из LocalStorage для мгновенного старта
-        let categories = JSON.parse(localStorage.getItem('kh_cats_global')) || defaultCats;
-        let products = JSON.parse(localStorage.getItem('kh_prods_global')) || defaultProducts;
-        let orders = JSON.parse(localStorage.getItem('kh_orders_global')) || [];
+        // Бронированная функция чтения из кэша (чтобы "сломанные" данные не вешали сайт)
+        function loadLocalData(key, defaultData) {
+            try {
+                let data = localStorage.getItem(key);
+                return data ? JSON.parse(data) : defaultData;
+            } catch(e) {
+                console.error("Ошибка чтения кэша", e);
+                return defaultData;
+            }
+        }
+
+        let categories = loadLocalData('kh_cats_global', defaultCats);
+        let products = loadLocalData('kh_prods_global', defaultProducts);
+        let orders = loadLocalData('kh_orders_global', []);
         
         let cart = {}; 
         let currentCat = "Все";
@@ -430,8 +439,10 @@
         // =========================================================================
         // 2. ИНИЦИАЛИЗАЦИЯ ИНТЕРФЕЙСА (МГНОВЕННЫЙ ЗАПУСК)
         // =========================================================================
-        renderCategoriesUI();
-        renderCatalog();
+        document.addEventListener("DOMContentLoaded", () => {
+            renderCategoriesUI();
+            renderCatalog();
+        });
 
         // =========================================================================
         // 3. ПОДКЛЮЧЕНИЕ FIREBASE (ФОНОВАЯ ЗАГРУЗКА)
@@ -451,9 +462,7 @@
             firebase.initializeApp(firebaseConfig);
             db = firebase.database();
             isFirebaseConnected = true;
-            console.log("🔥 Firebase: Фоновое соединение установлено");
 
-            // Слушаем облако и обновляем локальные данные тихо
             db.ref('categories').on('value', snapshot => {
                 if(snapshot.exists()) {
                     categories = safeArray(snapshot.val());
@@ -484,12 +493,10 @@
         }
 
         function saveToCloud() {
-            // Сохраняем всегда локально
             localStorage.setItem('kh_cats_global', JSON.stringify(categories));
             localStorage.setItem('kh_prods_global', JSON.stringify(products));
             localStorage.setItem('kh_orders_global', JSON.stringify(orders));
             
-            // Если есть интернет, отправляем в облако
             if (isFirebaseConnected && db) {
                 db.ref('categories').set(categories);
                 db.ref('products').set(products);
@@ -530,14 +537,13 @@
                 exitAdmin();
                 return;
             }
-            
             clicks++;
             if (clicks === 1) {
                 clickTimer = setTimeout(() => { clicks = 0; }, 400); 
             } else if (clicks === 2) {
                 clearTimeout(clickTimer);
                 clicks = 0;
-                let pin = prompt("🔐 Пин-код доступа:");
+                let pin = prompt("🔐 Введите Пин-код доступа:");
                 if(pin === ADMIN_PIN) {
                     enterAdmin();
                 } else if(pin !== null && pin.trim() !== "") {
@@ -595,7 +601,7 @@
         }
 
         function renderCatalog() {
-            if (isAdmin) return; // Не рендерим каталог для админа
+            if (isAdmin) return; 
             const grid = document.getElementById('products-grid');
             if(!grid) return;
             grid.innerHTML = '';
@@ -749,14 +755,12 @@
             }
         }
 
-        // ФУНКЦИЯ ПОЛНОГО ОБНУЛЕНИЯ
         function resetStats() {
-            let pin = prompt("⚠️ Внимание! Вы собираетесь удалить весь архив заказов и обнулить выручку.\n\nВведите пин-код (0908) для подтверждения:");
+            let pin = prompt("⚠️ Внимание! Вы удалите весь архив заказов и обнулите выручку.\n\nВведите пин-код для подтверждения (0908):");
             if(pin === ADMIN_PIN) {
-                // Оставляем только новые (не отгруженные) заказы, удаляя все из архива
                 orders = orders.filter(o => o.status !== 'sent');
                 saveToCloud();
-                showToast("🔄 Статистика и архив успешно обнулены");
+                showToast("🔄 Архив и статистика успешно обнулены");
                 if(!isFirebaseConnected) { renderAdminOrders(); updateDashboard(); }
             } else if(pin !== null) {
                 showToast("❌ Неверный пин-код");
@@ -819,7 +823,7 @@
                             `<button class="btn-main" style="width:100%; font-size:17px; background:var(--success); padding:16px;" onclick="markAsSent(${i})">✅ Перенесено в Планшет (Списать остатки)</button>` : 
                             `<div style="display:flex; gap:10px; width: 100%;">
                                 <div style="flex:1; text-align:center; background:#e5e7eb; padding:14px; border-radius:12px; font-size:15px; font-weight:800; color:var(--text-sec); display:flex; align-items:center; justify-content:center;">Отгружен (В архиве)</div>
-                                <button style="background:#fee2e2; color:var(--danger); border:none; border-radius:12px; padding:0 20px; font-size:22px; cursor:pointer; font-weight:bold; transition: 0.2s;" onclick="deleteArchiveOrder(${i})" title="Удалить из архива">🗑️</button>
+                                <button style="background:#fee2e2; color:var(--danger); border:none; border-radius:12px; padding:0 20px; font-size:22px; cursor:pointer; transition: 0.2s;" onclick="deleteArchiveOrder(${i})" title="Удалить из архива">🗑️</button>
                             </div>`
                         }
                     </div>
@@ -830,7 +834,6 @@
             });
         }
 
-        // ТОЧЕЧНОЕ УДАЛЕНИЕ АРХИВА
         function deleteArchiveOrder(idx) {
             if(confirm("❗ Вы уверены, что хотите удалить этот чек из архива?")) {
                 orders.splice(idx, 1);
@@ -842,8 +845,6 @@
 
         function markAsSent(idx) {
             let order = orders[idx];
-            
-            // Списание остатков
             order.items.forEach(item => {
                 let p = products.find(x => x.code === item.code);
                 if(p) {
@@ -851,17 +852,11 @@
                     if(p.stock < 0) p.stock = 0;
                 }
             });
-
             order.status = 'sent';
             
             saveToCloud(); 
             showToast("📦 Заказ отправлен в архив, остатки обновлены");
-            
-            if(!isFirebaseConnected) {
-                renderAdminOrders();
-                renderAdminProducts();
-                updateDashboard();
-            }
+            if(!isFirebaseConnected) { renderAdminOrders(); renderAdminProducts(); updateDashboard(); }
         }
 
         function parseOrderText() {
@@ -894,7 +889,7 @@
                 date: new Date().toLocaleString('ru-RU', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'})
             };
             
-            orders.unshift(newOrder); // Добавляем в начало
+            orders.unshift(newOrder); 
             saveToCloud();
             
             document.getElementById('inp-wa-text').value = '';
